@@ -79,7 +79,6 @@ class fc_tracking:
     def tracker_eval(self,s_x,x_crops,z_crop,targetPosition,window):
 
         reponseMaps=self.SFnet.eval_scoreMap(z_crop,x_crops,e_size=self.exemplarSize,i_size=self.instanceSize)
-        print "score map shape:",reponseMaps.shape
 
         if self.numScale>1:
             currentScaleID=math.ceil(self.numScale/2)-1
@@ -140,8 +139,7 @@ class fc_tracking:
         file=open(path,"r")
         bb=file.readline()
         bb=bb[:-1]
-        bb=bb[:-1]
-        bb=bb.split("\t",4)
+        bb=bb.split(",",4)
         for b in bb:
             bbox.append((float)(b))
         cx=bbox[0]+bbox[2]/2
@@ -228,8 +226,8 @@ class fc_tracking:
         scales=self.scaleStep**np.arange(math.ceil(self.numScale/2-self.numScale),math.floor(self.numScale/2)+1,1)
 
         cv2.namedWindow("tracking")
-
-        file=open("./result.txt","w")
+        #define a nparray to save result bbox
+        rbboxs=np.zeros((4,nImgs+1))
         for i in range(self.startFrame,nImgs):
             if i>self.startFrame:
                 im=imgFiles[i]
@@ -249,18 +247,17 @@ class fc_tracking:
                 targetSize=(1-self.scaleLR)*targetSize+self.scaleLR*scaledTarget[newScale]
 
             rectPosition=[targetPosition-targetSize/2,targetSize]
-            file.write(str(rectPosition[0][1])+','+str(rectPosition[0][0])+','+str(rectPosition[1][1])+','+str(rectPosition[1][0])+'\n')
             cv2.rectangle(im,((int)(rectPosition[0][1]),(int)(rectPosition[0][0])),((int)(rectPosition[0][1]+rectPosition[1][1]),(int)(rectPosition[0][0]+rectPosition[1][0])),color=(0,0,0))
             cv2.imshow('tracking',im)
-            print "finish frame NO.",i
+            rbboxs[:,i]=np.array([rectPosition[0][1],rectPosition[0][0],rectPosition[1][1],rectPosition[1][0]])
+            print "finish frame NO.",i,";bbox:",rbboxs[i]
             c = cv2.waitKey(inteval) & 0xFF
             if c == 27 or c == ord('q'):
                 break
 
         cv2.destroyAllWindows()
-        file.close()
-
+        np.save('./results.npy',rbboxs)
 
 
 tracker=fc_tracking()
-bb=tracker.tracker()
+tracker.tracker()
