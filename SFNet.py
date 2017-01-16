@@ -4,6 +4,7 @@ import scipy.io as sio
 import re
 import numpy as np
 import cv2
+import os
 from PIL import Image
 
 class SFNet:
@@ -13,8 +14,12 @@ class SFNet:
         self.params=self.GetParamFrMat()
 
     def conv2d(self,x, w, b, strides=1):
-        # Conv2D wrapper, with bias and relu activation
-        return tf.nn.bias_add(tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='VALID'), b)
+        if b==0:
+            return tf.nn.conv2d(x,w,strides=[1, strides, strides, 1],padding='VALID')
+        else:
+            # Conv2D wrapper, with bias and relu activation
+            return tf.nn.bias_add(tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding='VALID'), b)
+
 
     def maxpool(self,x, size, strides):
         # MaxPool2D wrapper
@@ -57,10 +62,9 @@ class SFNet:
         return params
 
     # simase-fc network
-    def FCnet(self,img):
-        x, y, z = img.shape
-        input = tf.convert_to_tensor(img)
-        input = tf.to_float(tf.reshape(input, [-1, x, y, 3]))
+    def FCnet(self,input,size):
+        input = tf.convert_to_tensor(input)
+        input = tf.to_float(tf.reshape(input, [-1, size, size, 3]))
 
         # conv layer1
         conv1 = self.conv2d(input, w=self.params["conv1f"], b=self.params["conv1b"], strides=2)
@@ -115,13 +119,43 @@ class SFNet:
         #dict = {'conv1': conv1, 'bn1': bn1, 'relu1': relu1, 'pool1': pool1x, 'conv2': conv2, 'bn2': bn2, 'relu2': relu2,'conv3': conv3, 'z_features': conv5}
         return conv5
 
-img1=Image.open('./01.jpg')
+    #define the default congfig of GPU choice and memery usage
+    def sessRun(self,input):
+        #choose the gpu and usage of gpu memory
+        os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+        sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
+
+        result=sess.run(input)
+        return result
+
+    #cross-correlation
+    def xcorr(self,input1,input2):
+        map=self.conv2d(input1,input2,0)
+        map=tf.mul(map,0.001)
+        map=tf.add(map,-2.1483638)
+        #map=tf.sigmoid(map)
+        return map
+
+    def eval_scoreMap(self,examplar,instance,e_size,i_size):
+        e_fmap=self.FCnet(examplar,e_size)
+        i_fmap=self.FCnet(instance,i_size)
+
+        shape=tf.shape(e_fmap)
+        e_fmap=tf.reshape(e_fmap,[shape[1],shape[2],shape[3],-1])
+
+        scoreMap=self.sessRun(self.xcorr(i_fmap,e_fmap))
+        return scoreMap
+
+'''
+img1=Image.open('/workspace/hw/WorkSpace/siamese-fc-py/data/BlurBody/img/0001.jpg')
 img1=np.array(img1)
 
-img2=cv2.imread('./01.jpg')
+img2=cv2.imread( '/workspace/hw/WorkSpace/siamese-fc-py/data/BlurBody/img/0001.jpg')
 img2=cv2.cvtColor(img2,cv2.COLOR_BGR2RGB)
 
 print np.sqrt(np.sum(np.square(img1-img2)))
+'''
 '''
 output=FCnet(img)
 
