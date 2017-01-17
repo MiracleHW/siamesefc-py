@@ -9,9 +9,15 @@ from PIL import Image
 
 class SFNet:
     params = []
+    e_input = tf.placeholder("float", shape=[127, 127, 3])
+    i_input = tf.placeholder("float", shape=[None, 255, 255, 3])
+    score=[]
+    sess=[]
 
     def __init__(self):
         self.params=self.GetParamFrMat()
+        self.score=self.xcorrMap()
+        self.sess=self.sessRun()
 
     def conv2d(self,x, w, b, strides=1):
         if b==0:
@@ -119,36 +125,45 @@ class SFNet:
         #dict = {'conv1': conv1, 'bn1': bn1, 'relu1': relu1, 'pool1': pool1x, 'conv2': conv2, 'bn2': bn2, 'relu2': relu2,'conv3': conv3, 'z_features': conv5}
         return conv5
 
-    #define the default congfig of GPU choice and memery usage
-    def sessRun(self,input,feed_dict):
+    #define the default congfig of GPU choice and memory usage
+    def sessRun(self):
         #choose the gpu and usage of gpu memory
         os.environ['CUDA_VISIBLE_DEVICES'] = '2'
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
         sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
 
-        result=sess.run(input,feed_dict=feed_dict)
-        return result
+        return sess
 
-    #cross-correlation
-    def xcorr(self,input1,input2):
-        map=self.conv2d(input1,input2,0)
+    #cross-correlation score map
+    def xcorrMap(self):
+        e_fmap = self.FCnet(self.e_input, 127)
+        i_fmap = self.FCnet(self.i_input, 255)
+
+        shape = tf.shape(e_fmap)
+        e_fmap = tf.reshape(e_fmap, [shape[1], shape[2], shape[3], -1])
+
+        map=self.conv2d(i_fmap,e_fmap,0)
         map=tf.mul(map,0.001)
         map=tf.add(map,-2.1483638)
         #map=tf.sigmoid(map)
+
         return map
-
-    def eval_scoreMap(self,examplar,instance,e_size,i_size):
-        e_input=tf.placeholder("float",shape=[e_size,e_size,3])
-        i_input=tf.placeholder("float",shape=[None,i_size,i_size,3])
-
-        e_fmap=self.FCnet(e_input,e_size)
-        i_fmap=self.FCnet(i_input,i_size)
+    '''
+    def eval_scoreMap(self):
+        e_fmap=self.FCnet(self.e_input,127)
+        i_fmap=self.FCnet(self.i_input,255)
 
         shape=tf.shape(e_fmap)
         e_fmap=tf.reshape(e_fmap,[shape[1],shape[2],shape[3],-1])
 
-        scoreMap=self.sessRun(self.xcorr(i_fmap,e_fmap),feed_dict={e_input:examplar,i_input:instance})
-        return scoreMap
+        score=self.xcorr(i_fmap,e_fmap)
+        return score
+    '''
+    #run the sess in any interation
+    def eval_scoreMap(self,expamplar,instance):
+        result=self.sess.run(self.score,feed_dict={self.e_input:expamplar,self.i_input:instance})
+        return result
+
 
 '''
 img1=Image.open('/workspace/hw/WorkSpace/siamese-fc-py/data/BlurBody/img/0001.jpg')

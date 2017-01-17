@@ -78,8 +78,8 @@ class fc_tracking:
 
     def tracker_eval(self,s_x,x_crops,z_crop,targetPosition,window):
 
-        reponseMaps=self.SFnet.eval_scoreMap(z_crop,x_crops,e_size=self.exemplarSize,i_size=self.instanceSize)
-
+        #reponseMaps=self.SFnet.eval_scoreMap(z_crop,x_crops,e_size=self.exemplarSize,i_size=self.instanceSize)
+        reponseMaps = self.SFnet.eval_scoreMap(z_crop, x_crops)
         if self.numScale>1:
             currentScaleID=math.ceil(self.numScale/2)-1
             bestScale=currentScaleID
@@ -249,7 +249,7 @@ class fc_tracking:
                 targetSize=(1-self.scaleLR)*targetSize+self.scaleLR*scaledTarget[newScale]
 
             rectPosition=[targetPosition-targetSize/2,targetSize]
-            cv2.rectangle(im,((int)(rectPosition[0][1]),(int)(rectPosition[0][0])),((int)(rectPosition[0][1]+rectPosition[1][1]),(int)(rectPosition[0][0]+rectPosition[1][0])),color=(0,0,0))
+            cv2.rectangle(im,((int)(rectPosition[0][1]),(int)(rectPosition[0][0])),((int)(rectPosition[0][1]+rectPosition[1][1]),(int)(rectPosition[0][0]+rectPosition[1][0])),color=(255,0,0))
             cv2.imshow('tracking',im)
             rbboxs[:,i]=np.array([rectPosition[0][1],rectPosition[0][0],rectPosition[1][1],rectPosition[1][0]])
             print "finish frame NO.",i,";bbox:",rbboxs[:,i]
@@ -261,6 +261,6 @@ class fc_tracking:
         print 'save resutls'
         np.save('./results.npy',rbboxs)
 
-
-tracker=fc_tracking()
-tracker.tracker()
+if __name__=='__main__':
+    tracker=fc_tracking()
+    tracker.tracker()
