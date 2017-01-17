@@ -135,11 +135,12 @@ class fc_tracking:
 
     def Init4NumberBB(self):
         bbox=[]
-        path='/workspace/hw/WorkSpace/siamese-fc-py/vot15_bag/groundtruth_rect.txt'
+        path='/workspace/hw/WorkSpace/siamese-fc-py/data/BlurBody/groundtruth_rect.txt'
         file=open(path,"r")
         bb=file.readline()
         bb=bb[:-1]
-        bb=bb.split(",",4)
+        bb=bb[:-1]
+        bb=bb.split("\t",4)
         for b in bb:
             bbox.append((float)(b))
         cx=bbox[0]+bbox[2]/2
@@ -179,6 +180,7 @@ class fc_tracking:
         imgs = []
         for i in range(1, 196):
             img_path = '/workspace/hw/WorkSpace/siamese-fc-py/vot15_bag/imgs/%08d.jpg' % i
+            #img_path = '/workspace/hw/WorkSpace/siamese-fc-py/data/BlurBody/img/%04d.jpg' % i
             img = self.cvreadRGBimg(img_path)
             imgs.append(img)
         return imgs
@@ -187,7 +189,7 @@ class fc_tracking:
         inteval=1
         #read imgs and groudth from local file
         imgFiles=self.ReadSequences()
-        bb=self.Init8NumberBB()#x,y,w,h
+        bb=self.Init8NumberBB()#cx,cy,w,h
 
         targetPosition=np.array([bb[1],bb[0]])#center_y,center_x
         targetSize=np.array([bb[3],bb[2]])#h,w
@@ -250,12 +252,13 @@ class fc_tracking:
             cv2.rectangle(im,((int)(rectPosition[0][1]),(int)(rectPosition[0][0])),((int)(rectPosition[0][1]+rectPosition[1][1]),(int)(rectPosition[0][0]+rectPosition[1][0])),color=(0,0,0))
             cv2.imshow('tracking',im)
             rbboxs[:,i]=np.array([rectPosition[0][1],rectPosition[0][0],rectPosition[1][1],rectPosition[1][0]])
-            print "finish frame NO.",i,";bbox:",rbboxs[i]
+            print "finish frame NO.",i,";bbox:",rbboxs[:,i]
             c = cv2.waitKey(inteval) & 0xFF
             if c == 27 or c == ord('q'):
                 break
 
         cv2.destroyAllWindows()
+        print 'save resutls'
         np.save('./results.npy',rbboxs)
 
 

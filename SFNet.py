@@ -120,13 +120,13 @@ class SFNet:
         return conv5
 
     #define the default congfig of GPU choice and memery usage
-    def sessRun(self,input):
+    def sessRun(self,input,feed_dict):
         #choose the gpu and usage of gpu memory
         os.environ['CUDA_VISIBLE_DEVICES'] = '2'
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
         sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
 
-        result=sess.run(input)
+        result=sess.run(input,feed_dict=feed_dict)
         return result
 
     #cross-correlation
@@ -138,13 +138,16 @@ class SFNet:
         return map
 
     def eval_scoreMap(self,examplar,instance,e_size,i_size):
-        e_fmap=self.FCnet(examplar,e_size)
-        i_fmap=self.FCnet(instance,i_size)
+        e_input=tf.placeholder("float",shape=[e_size,e_size,3])
+        i_input=tf.placeholder("float",shape=[None,i_size,i_size,3])
+
+        e_fmap=self.FCnet(e_input,e_size)
+        i_fmap=self.FCnet(i_input,i_size)
 
         shape=tf.shape(e_fmap)
         e_fmap=tf.reshape(e_fmap,[shape[1],shape[2],shape[3],-1])
 
-        scoreMap=self.sessRun(self.xcorr(i_fmap,e_fmap))
+        scoreMap=self.sessRun(self.xcorr(i_fmap,e_fmap),feed_dict={e_input:examplar,i_input:instance})
         return scoreMap
 
 '''
